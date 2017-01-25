@@ -25,23 +25,23 @@
 
 #include "BehaviorTree.h"
 
-BTree::Node::~Node()
+BehaviorTree::Node::~Node()
 {}
 
-BTree::CompositeNode::CompositeNode() : Node(), maxChildren(BTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BehaviorTree::CompositeNode::CompositeNode() : Node(), maxChildren(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(-1)
 {}
 
-BTree::CompositeNode::CompositeNode(Node* child) : Node(), maxChildren(BTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BehaviorTree::CompositeNode::CompositeNode(Node* child) : Node(), maxChildren(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(-1)
 {
 	this->addChild(child);
 }
 
-BTree::CompositeNode::CompositeNode(const std::vector<Node*>& children) : Node(), maxChildren(BTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BehaviorTree::CompositeNode::CompositeNode(const std::vector<Node*>& children) : Node(), maxChildren(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(-1)
 {
 	this->addChildren(children);
 }
 
-void BTree::CompositeNode::addChild(Node* child)
+void BehaviorTree::CompositeNode::addChild(Node* child)
 {
 	if (child != nullptr)
 	{
@@ -49,7 +49,7 @@ void BTree::CompositeNode::addChild(Node* child)
 	}
 }
 
-void BTree::CompositeNode::addChildren(const std::vector<Node*>& children)
+void BehaviorTree::CompositeNode::addChildren(const std::vector<Node*>& children)
 {
 	if (this->maxChildren > 0)
 	{
@@ -72,12 +72,12 @@ void BTree::CompositeNode::addChildren(const std::vector<Node*>& children)
 	}
 }
 
-const std::vector<BTree::Node*>& BTree::CompositeNode::getChildren()
+const std::vector<BehaviorTree::Node*>& BehaviorTree::CompositeNode::getChildren()
 {
 	return this->children;
 }
 
-void BTree::CompositeNode::clearChildren(const bool cleanUp)
+void BehaviorTree::CompositeNode::clearChildren(const bool cleanUp)
 {
 	if (cleanUp)
 	{
@@ -93,7 +93,7 @@ void BTree::CompositeNode::clearChildren(const bool cleanUp)
 	this->children.clear();
 }
 
-void BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool cleanUpRemains)
+void BehaviorTree::CompositeNode::setMaxChildren(const int maxChildren, const bool cleanUpRemains)
 {
 	//can't be 0
 	if (maxChildren == 0)
@@ -102,7 +102,7 @@ void BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool clea
 	}
 
 	//make infinite
-	if (maxChildren == BTree::INFINITE_CHILDREN)
+	if (maxChildren == BehaviorTree::INFINITE_CHILDREN)
 	{
 		this->maxChildren = maxChildren;
 		return;
@@ -126,8 +126,8 @@ void BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool clea
 	//new size is not infiite, 0, or bigger than current size.
 	size_t size = static_cast<size_t>(maxChildren);
 
-	std::vector<BTree::Node*> newChildren(this->children.begin(), this->children.begin() + size);
-	std::vector<BTree::Node*> remaining(this->children.begin() + size, this->children.end());
+	std::vector<BehaviorTree::Node*> newChildren(this->children.begin(), this->children.begin() + size);
+	std::vector<BehaviorTree::Node*> remaining(this->children.begin() + size, this->children.end());
 
 	if (cleanUpRemains)
 	{
@@ -143,7 +143,7 @@ void BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool clea
 	this->children = newChildren;
 }
 
-BTree::CompositeNode::~CompositeNode()
+BehaviorTree::CompositeNode::~CompositeNode()
 {
 	for (auto child : this->children)
 	{
@@ -156,13 +156,13 @@ BTree::CompositeNode::~CompositeNode()
 
 
 
-BTree::Selector::Selector(Node* child) : BTree::CompositeNode(child) {}
+BehaviorTree::Selector::Selector(Node* child) : BehaviorTree::CompositeNode(child) {}
 
-BTree::Selector::Selector(const std::vector<Node*>& children) : BTree::CompositeNode(children) {}
+BehaviorTree::Selector::Selector(const std::vector<Node*>& children) : BehaviorTree::CompositeNode(children) {}
 
-BTree::Selector::~Selector() {}
+BehaviorTree::Selector::~Selector() {}
 
-const BTree::NODE_STATUS BTree::Selector::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::Selector::update(const float delta)
 {
 	int start = 0;
 	int size = static_cast<int>(this->children.size());
@@ -171,14 +171,14 @@ const BTree::NODE_STATUS BTree::Selector::update(const float delta)
 	if (this->runningChildIndex >= 0 && this->runningChildIndex < size)
 	{
 		//has running child
-		BTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
+		BehaviorTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
 
-		if (status == BTree::NODE_STATUS::RUNNING)
+		if (status == BehaviorTree::NODE_STATUS::RUNNING)
 		{
 			//still running
 			return status;
 		}
-		else if (status == BTree::NODE_STATUS::SUCCESS)
+		else if (status == BehaviorTree::NODE_STATUS::SUCCESS)
 		{
 			//success. remove running child
 			this->runningChildIndex = -1;
@@ -198,10 +198,10 @@ const BTree::NODE_STATUS BTree::Selector::update(const float delta)
 	{
 		if (this->children.at(i) != nullptr)
 		{
-			BTree::NODE_STATUS status = this->children.at(i)->update(delta);
-			if (status != BTree::NODE_STATUS::FAILURE)
+			BehaviorTree::NODE_STATUS status = this->children.at(i)->update(delta);
+			if (status != BehaviorTree::NODE_STATUS::FAILURE)
 			{
-				if (status == BTree::NODE_STATUS::RUNNING)
+				if (status == BehaviorTree::NODE_STATUS::RUNNING)
 				{
 					//Set this node as running child
 					this->runningChildIndex = i;
@@ -216,12 +216,12 @@ const BTree::NODE_STATUS BTree::Selector::update(const float delta)
 		}
 	}
 
-	return BTree::NODE_STATUS::FAILURE;
+	return BehaviorTree::NODE_STATUS::FAILURE;
 }
 
-BTree::Selector* BTree::Selector::clone()
+BehaviorTree::Selector* BehaviorTree::Selector::clone()
 {
-	BTree::Selector* newSelector = nullptr;
+	BehaviorTree::Selector* newSelector = nullptr;
 
 	std::vector<Node*> childrenClones;
 
@@ -238,13 +238,13 @@ BTree::Selector* BTree::Selector::clone()
 
 
 
-BTree::RandomSelector::RandomSelector(Node* child) : BTree::Selector(child) {}
+BehaviorTree::RandomSelector::RandomSelector(Node* child) : BehaviorTree::Selector(child) {}
 
-BTree::RandomSelector::RandomSelector(const std::vector<Node*>& children) : BTree::Selector(children) {}
+BehaviorTree::RandomSelector::RandomSelector(const std::vector<Node*>& children) : BehaviorTree::Selector(children) {}
 
-BTree::RandomSelector::~RandomSelector() {}
+BehaviorTree::RandomSelector::~RandomSelector() {}
 
-const BTree::NODE_STATUS BTree::RandomSelector::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::RandomSelector::update(const float delta)
 {
 	//No need to shuffle children if there's only one child
 	if (this->children.size() > 1 && this->runningChildIndex < 0)
@@ -253,26 +253,26 @@ const BTree::NODE_STATUS BTree::RandomSelector::update(const float delta)
 		std::shuffle(std::begin(this->children), std::end(this->children), engine);
 	}
 	
-	return BTree::Selector::update(delta);
+	return BehaviorTree::Selector::update(delta);
 }
 
-BTree::RandomSelector* BTree::RandomSelector::clone()
+BehaviorTree::RandomSelector* BehaviorTree::RandomSelector::clone()
 {
-	return static_cast<BTree::RandomSelector*>(BTree::Selector::clone());
+	return static_cast<BehaviorTree::RandomSelector*>(BehaviorTree::Selector::clone());
 }
 
 
 
 
-BTree::Sequence::Sequence(Node* child) : BTree::CompositeNode(child)
+BehaviorTree::Sequence::Sequence(Node* child) : BehaviorTree::CompositeNode(child)
 {}
 
-BTree::Sequence::Sequence(const std::vector<Node*>& children) : BTree::CompositeNode(children)
+BehaviorTree::Sequence::Sequence(const std::vector<Node*>& children) : BehaviorTree::CompositeNode(children)
 {}
 
-BTree::Sequence::~Sequence() {}
+BehaviorTree::Sequence::~Sequence() {}
 
-const BTree::NODE_STATUS BTree::Sequence::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::Sequence::update(const float delta)
 {
 	int start = 0;
 	int size = static_cast<int>(this->children.size());
@@ -281,14 +281,14 @@ const BTree::NODE_STATUS BTree::Sequence::update(const float delta)
 	if (this->runningChildIndex >= 0 && this->runningChildIndex < size)
 	{
 		//has running child
-		BTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
-		if (status != BTree::NODE_STATUS::RUNNING)
+		BehaviorTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
+		if (status != BehaviorTree::NODE_STATUS::RUNNING)
 		{
 			//not running anymore. Clear index.
 			this->runningChildIndex = -1;
 		}
 		//else, status was not running anymore. Either success, failure or invalid
-		else if (status != BTree::NODE_STATUS::SUCCESS)
+		else if (status != BehaviorTree::NODE_STATUS::SUCCESS)
 		{
 			//if was not success, which means it failed or invalid. End seqeunce.
 			return status;
@@ -303,10 +303,10 @@ const BTree::NODE_STATUS BTree::Sequence::update(const float delta)
 	{
 		if (this->children.at(i) != nullptr)
 		{
-			BTree::NODE_STATUS status = this->children.at(i)->update(delta);
-			if (status != BTree::NODE_STATUS::SUCCESS)
+			BehaviorTree::NODE_STATUS status = this->children.at(i)->update(delta);
+			if (status != BehaviorTree::NODE_STATUS::SUCCESS)
 			{
-				if (status == BTree::NODE_STATUS::RUNNING)
+				if (status == BehaviorTree::NODE_STATUS::RUNNING)
 				{
 					//Set this node as running child
 					this->runningChildIndex = i;
@@ -321,12 +321,12 @@ const BTree::NODE_STATUS BTree::Sequence::update(const float delta)
 		}
 	}
 
-	return BTree::NODE_STATUS::SUCCESS;
+	return BehaviorTree::NODE_STATUS::SUCCESS;
 }
 
-BTree::Sequence* BTree::Sequence::clone()
+BehaviorTree::Sequence* BehaviorTree::Sequence::clone()
 {
-	BTree::Sequence* newSequence = nullptr;
+	BehaviorTree::Sequence* newSequence = nullptr;
 
 	std::vector<Node*> childrenClones;
 
@@ -342,15 +342,15 @@ BTree::Sequence* BTree::Sequence::clone()
 
 
 
-BTree::RandomSequence::RandomSequence(Node* child) : BTree::Sequence(child)
+BehaviorTree::RandomSequence::RandomSequence(Node* child) : BehaviorTree::Sequence(child)
 {}
 
-BTree::RandomSequence::RandomSequence(const std::vector<Node*>& children) : BTree::Sequence(children)
+BehaviorTree::RandomSequence::RandomSequence(const std::vector<Node*>& children) : BehaviorTree::Sequence(children)
 {}
 
-BTree::RandomSequence::~RandomSequence() {}
+BehaviorTree::RandomSequence::~RandomSequence() {}
 
-const BTree::NODE_STATUS BTree::RandomSequence::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::RandomSequence::update(const float delta)
 {
 	//No need to shuffle children if there's only one child.
 	if (this->children.size() > 1)
@@ -359,24 +359,24 @@ const BTree::NODE_STATUS BTree::RandomSequence::update(const float delta)
 		std::shuffle(std::begin(this->children), std::end(this->children), engine);
 	}
 
-	return BTree::Sequence::update(delta);
+	return BehaviorTree::Sequence::update(delta);
 }
 
-BTree::RandomSequence* BTree::RandomSequence::clone()
+BehaviorTree::RandomSequence* BehaviorTree::RandomSequence::clone()
 {
-	return static_cast<BTree::RandomSequence*>(BTree::Sequence::clone());
+	return static_cast<BehaviorTree::RandomSequence*>(BehaviorTree::Sequence::clone());
 }
 
 
 
 
 
-BTree::DecoratorNode::DecoratorNode(Node* child)
+BehaviorTree::DecoratorNode::DecoratorNode(Node* child)
 {
 	addChild(child);
 }
 
-BTree::DecoratorNode::~DecoratorNode()
+BehaviorTree::DecoratorNode::~DecoratorNode()
 {
 	if (this->child != nullptr)
 	{
@@ -384,7 +384,7 @@ BTree::DecoratorNode::~DecoratorNode()
 	}
 }
 
-void BTree::DecoratorNode::addChild(Node* child)
+void BehaviorTree::DecoratorNode::addChild(Node* child)
 {
 	if (child != nullptr)
 	{
@@ -392,25 +392,25 @@ void BTree::DecoratorNode::addChild(Node* child)
 	}
 }
 
-BTree::Inverter::Inverter(Node* child) : BTree::DecoratorNode(child)
+BehaviorTree::Inverter::Inverter(Node* child) : BehaviorTree::DecoratorNode(child)
 {}
 
-const BTree::NODE_STATUS BTree::Inverter::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::Inverter::update(const float delta)
 {
-	BTree::NODE_STATUS status = this->child->update(delta);
+	BehaviorTree::NODE_STATUS status = this->child->update(delta);
 
-	if (status == BTree::NODE_STATUS::RUNNING || status == BTree::NODE_STATUS::INVALID)
+	if (status == BehaviorTree::NODE_STATUS::RUNNING || status == BehaviorTree::NODE_STATUS::INVALID)
 	{
 		return status;
 	}
 	else
 	{
-		return status == BTree::NODE_STATUS::SUCCESS ? BTree::NODE_STATUS::FAILURE : BTree::NODE_STATUS::SUCCESS;
+		return status == BehaviorTree::NODE_STATUS::SUCCESS ? BehaviorTree::NODE_STATUS::FAILURE : BehaviorTree::NODE_STATUS::SUCCESS;
 	}
 
 }
 
-BTree::Inverter* BTree::Inverter::clone()
+BehaviorTree::Inverter* BehaviorTree::Inverter::clone()
 {
 	return new Inverter(this->child->clone());
 }
@@ -418,32 +418,32 @@ BTree::Inverter* BTree::Inverter::clone()
 
 
 
-BTree::Succeeder::Succeeder(Node* child) : BTree::DecoratorNode(child)
+BehaviorTree::Succeeder::Succeeder(Node* child) : BehaviorTree::DecoratorNode(child)
 {}
 
-const BTree::NODE_STATUS BTree::Succeeder::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::Succeeder::update(const float delta)
 {
 	this->child->update(delta);
-	return BTree::NODE_STATUS::SUCCESS;
+	return BehaviorTree::NODE_STATUS::SUCCESS;
 }
 
-BTree::Succeeder* BTree::Succeeder::clone()
+BehaviorTree::Succeeder* BehaviorTree::Succeeder::clone()
 {
 	return new Succeeder(this->child->clone());
 }
 
 
 
-BTree::Failer::Failer(Node* child) : BTree::DecoratorNode(child)
+BehaviorTree::Failer::Failer(Node* child) : BehaviorTree::DecoratorNode(child)
 {}
 
-const BTree::NODE_STATUS BTree::Failer::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::Failer::update(const float delta)
 {
 	this->child->update(delta);
-	return BTree::NODE_STATUS::FAILURE;
+	return BehaviorTree::NODE_STATUS::FAILURE;
 }
 
-BTree::Failer* BTree::Failer::clone()
+BehaviorTree::Failer* BehaviorTree::Failer::clone()
 {
 	return new Failer(this->child->clone());
 }
@@ -451,15 +451,15 @@ BTree::Failer* BTree::Failer::clone()
 
 
 
-BTree::Repeater::Repeater(Node* child, const int repeat) : BTree::DecoratorNode(child), repeat(repeat)
+BehaviorTree::Repeater::Repeater(Node* child, const int repeat) : BehaviorTree::DecoratorNode(child), repeat(repeat)
 {}
 
-const BTree::NODE_STATUS BTree::Repeater::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::Repeater::update(const float delta)
 {
 	for (int i = 0; i < repeat; i++)
 	{
-		BTree::NODE_STATUS status = this->child->update(delta);
-		if (status == BTree::NODE_STATUS::SUCCESS || status == BTree::NODE_STATUS::FAILURE)
+		BehaviorTree::NODE_STATUS status = this->child->update(delta);
+		if (status == BehaviorTree::NODE_STATUS::SUCCESS || status == BehaviorTree::NODE_STATUS::FAILURE)
 		{
 			continue;
 		}
@@ -469,10 +469,10 @@ const BTree::NODE_STATUS BTree::Repeater::update(const float delta)
 		}
 	}
 
-	return BTree::NODE_STATUS::SUCCESS;
+	return BehaviorTree::NODE_STATUS::SUCCESS;
 }
 
-BTree::Repeater* BTree::Repeater::clone()
+BehaviorTree::Repeater* BehaviorTree::Repeater::clone()
 {
 	return new Repeater(this->child->clone(), this->repeat);
 }
@@ -480,18 +480,18 @@ BTree::Repeater* BTree::Repeater::clone()
 
 
 
-BTree::Locker::Locker(Node* child, const float duration) : BTree::DecoratorNode(child), elapsedTime(0), duration(duration) {}
+BehaviorTree::Locker::Locker(Node* child, const float duration) : BehaviorTree::DecoratorNode(child), elapsedTime(0), duration(duration) {}
 
-const BTree::NODE_STATUS BTree::Locker::update(const float delta)
+const BehaviorTree::NODE_STATUS BehaviorTree::Locker::update(const float delta)
 {
-	//cocos2d::log("BTree::Locker");
-	if (statusResult == BTree::NODE_STATUS::NONE || statusResult == BTree::NODE_STATUS::RUNNING)
+	//cocos2d::log("BehaviorTree::Locker");
+	if (statusResult == BehaviorTree::NODE_STATUS::NONE || statusResult == BehaviorTree::NODE_STATUS::RUNNING)
 	{
 		//keep update node if it none(fresh execution) or running(continue updating)
 		statusResult = child->update(delta);
 	}
 
-	if (statusResult == BTree::NODE_STATUS::RUNNING || statusResult == BTree::NODE_STATUS::INVALID)
+	if (statusResult == BehaviorTree::NODE_STATUS::RUNNING || statusResult == BehaviorTree::NODE_STATUS::INVALID)
 	{
 		//if running, keep update. If invalid, gg.
 		return statusResult;
@@ -500,29 +500,29 @@ const BTree::NODE_STATUS BTree::Locker::update(const float delta)
 	{
 		//result was either success or fail. Count time
 		elapsedTime += delta;
-		//cocos2d::log("BTree::Locker waiting... %f / %f", elapsedTime, duration);
+		//cocos2d::log("BehaviorTree::Locker waiting... %f / %f", elapsedTime, duration);
 		if (elapsedTime < duration)
 		{
 			//lock. Return running to keep run this node
-			return BTree::NODE_STATUS::RUNNING;
+			return BehaviorTree::NODE_STATUS::RUNNING;
 		}
 		else
 		{
 			//end.
-			BTree::NODE_STATUS result = statusResult;
+			BehaviorTree::NODE_STATUS result = statusResult;
 			reset();
 			return result;
 		}
 	}
 }
 
-BTree::Locker* BTree::Locker::clone()
+BehaviorTree::Locker* BehaviorTree::Locker::clone()
 {
 	return new Locker(this->child->clone(), this->duration);
 }
 
-void BTree::Locker::reset()
+void BehaviorTree::Locker::reset()
 {
-	statusResult = BTree::NODE_STATUS::NONE;
+	statusResult = BehaviorTree::NODE_STATUS::NONE;
 	elapsedTime = 0;
 }
