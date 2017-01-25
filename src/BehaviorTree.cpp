@@ -25,52 +25,67 @@
 
 #include "BehaviorTree.h"
 
-BehaviorTree::CompositeNode::CompositeNode() : Node(), maxChildren(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BehaviorTree::CompositeNode::CompositeNode() : Node(), maxChildrenSize(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(BehaviorTree::NO_RUNNING_CHILD)
 {}
 
-BehaviorTree::CompositeNode::CompositeNode(Node* child) : Node(), maxChildren(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BehaviorTree::CompositeNode::CompositeNode(BehaviorTree::Node* child) : Node(), maxChildrenSize(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(BehaviorTree::NO_RUNNING_CHILD)
 {
 	this->addChild(child);
 }
 
-BehaviorTree::CompositeNode::CompositeNode(const std::vector<Node*>& children) : Node(), maxChildren(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BehaviorTree::CompositeNode::CompositeNode(const std::vector<Node*>& children) : Node(), maxChildrenSize(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(BehaviorTree::NO_RUNNING_CHILD)
 {
 	this->addChildren(children);
 }
 
-void BehaviorTree::CompositeNode::addChild(Node* child)
+const bool BehaviorTree::CompositeNode::addChild(BehaviorTree::Node* child)
 {
 	if (child != nullptr)
 	{
+		// Add to children
 		this->children.push_back(child);
+		return true;
+	}
+	else
+	{
+		return false;
 	}
 }
 
-void BehaviorTree::CompositeNode::addChildren(const std::vector<Node*>& children)
+const bool BehaviorTree::CompositeNode::addChildren(const std::vector<Node*>& children)
 {
-	if (this->maxChildren > 0)
+	if (children.empty())
 	{
-		int currentChildrenSize = static_cast<int>(this->children.size());
+		// Empty children. Reject
+		return false;
+	}
 
+	if (this->maxChildrenSize != BehaviorTree::INFINITE_CHILDREN)
+	{
+		// There is maximum children can be added. Get current children size
+		int currentChildrenSize = static_cast<int>(this->children.size());
+		// Get size of children that need to be added
 		int addingChildrenSize = static_cast<int>(children.size());
 
-		if (currentChildrenSize + addingChildrenSize > this->maxChildren)
+		if (currentChildrenSize + addingChildrenSize > this->maxChildrenSize)
 		{
-			return;
+			// Total size after adding children exceeds maximu children size. Reject.
+			return false;
 		}
 	}
 
 	for (auto child : children)
 	{
-		if (child != nullptr)
-		{
-			this->addChild(child);
-		}
+		// Add to children. No need to check 
+		this->addChild(child);
 	}
+
+	return true;
 }
 
 const std::vector<BehaviorTree::Node*>& BehaviorTree::CompositeNode::getChildren()
 {
+	// Return children as reference
 	return this->children;
 }
 
@@ -78,52 +93,65 @@ void BehaviorTree::CompositeNode::clearChildren(const bool cleanUp)
 {
 	if (cleanUp)
 	{
+		// Delete all children instances.
 		for (auto child : this->children)
 		{
 			if (child != nullptr)
 			{
 				delete child;
+				child = nullptr;
 			}
 		}
 	}
 
+	// Clear vector
 	this->children.clear();
 }
 
-void BehaviorTree::CompositeNode::setMaxChildren(const int maxChildren, const bool cleanUpRemains)
+const bool BehaviorTree::CompositeNode::setMaxChildrenSize(const int maxChildrenSize, const bool cleanUpRemains)
 {
 	//can't be 0
-	if (maxChildren == 0)
+	if (maxChildrenSize == 0)
 	{
-		return;
+		return false;
 	}
 
-	//make infinite
-	if (maxChildren == BehaviorTree::INFINITE_CHILDREN)
+	// Get current children size
+	const int currentChildrenSize = static_cast<int>(this->children.size());
+	if (maxChildrenSize == currentChildrenSize)
 	{
-		this->maxChildren = maxChildren;
-		return;
+		// Setting to same size. 
+		return true;
 	}
 
-	//always can increase size without issue
-	if (maxChildren >= this->maxChildren)
+	//make infinite. Always valid operation.
+	if (maxChildrenSize == BehaviorTree::INFINITE_CHILDREN)
 	{
-		this->maxChildren = maxChildren;
-		return;
+		this->maxChildrenSize = BehaviorTree::INFINITE_CHILDREN;
+		return true;
 	}
 
-	//can be resized without resizing children vector
-	int currentChildrenSize = static_cast<int>(this->children.size());
-	if (currentChildrenSize <= maxChildren)
+	//Check if new max children size is larger than current max children size
+	if (maxChildrenSize >= this->maxChildrenSize)
 	{
-		this->maxChildren = maxChildren;
-		return;
+		// Valid. Set new max children size.
+		this->maxChildrenSize = maxChildrenSize;
+		return true;
+	}
+
+	// Check if max children size is current children size
+	if (currentChildrenSize < maxChildrenSize)
+	{
+		//can be resized without resizing children vector
+		this->maxChildrenSize = maxChildrenSize;
+		return true;
 	}
 	
-	//new size is not infiite, 0, or bigger and equal than current size.
+	//new maximum children size is not infiite, 0, or bigger and equal than current size.
 	if (cleanUpRemains)
 	{
-		int i = maxChildren;
+		// Clean up reamaining nodes before resizing.
+		int i = maxChildrenSize;
 		int childrenSize = static_cast<int>(this->children.size());
 		for (; i < childrenSize; i)
 		{
@@ -135,11 +163,102 @@ void BehaviorTree::CompositeNode::setMaxChildren(const int maxChildren, const bo
 	}
 
 	// Resize
-	this->children.resize(maxChildren);
+	this->children.resize(maxChildrenSize);
+}
+
+const bool BehaviorTree::CompositeNode::isRunningChildIndexValid()
+{
+	int size = static_cast<int>(this->children.size());
+	return (this->runningChildIndex < size) && (this->runningChildIndex != BehaviorTree::NO_RUNNING_CHILD);
+}
+
+const BehaviorTree::NODE_STATE BehaviorTree::CompositeNode::updateRunningChild(const float delta, int& start)
+{
+	int size = static_cast<int>(this->children.size());
+
+	//check if this selector has running child and make sure it's in the range
+	if (this->runningChildIndex < size)
+	{
+		// This selector has running child and it's in range of children size.
+		// Update running node and get result.
+		BehaviorTree::NODE_STATE state = this->children.at(this->runningChildIndex)->update(delta);
+
+		if (state == BehaviorTree::NODE_STATE::RUNNING)
+		{
+			// Still running. Keep go on.
+			return state;
+		}
+		else if (state == BehaviorTree::NODE_STATE::SUCCESS)
+		{
+			// Success. Reset running child index.
+			this->runningChildIndex = BehaviorTree::NO_RUNNING_CHILD;
+			// Because it's selector, ends here.
+			return state;
+		}
+		else
+		{
+			// Else, status is FAILURE or ignorable ERROR.
+			// Set start index after the running child index.
+			start = this->runningChildIndex + 1;
+			// Reset running child index
+			this->runningChildIndex = BehaviorTree::NO_RUNNING_CHILD;
+		}
+	}
+	// else, there was no running child
+	return BehaviorTree::NODE_STATE::FAILURE;
+}
+
+const BehaviorTree::NODE_STATE BehaviorTree::CompositeNode::updateChildren(const int start, const float delta, const BehaviorTree::NODE_STATE continueCondition)
+{
+	// If running childe node returned FAILURE or ERROR, keep go on.
+	int size = static_cast<int>(this->children.size());
+	for (int i = start; i < size; i++)
+	{
+		if (this->children.at(i) != nullptr)
+		{
+			// Update node
+			BehaviorTree::NODE_STATE state = this->children.at(i)->update(delta);
+			// Check status
+			if (state == continueCondition)
+			{
+				// Failed. Proceed to next 
+				continue;
+			}
+			else if (state == BehaviorTree::NODE_STATE::ERROR)
+			{
+				// Error occured.
+				if (BehaviorTree::IGNORE_ERROR)
+				{
+					// Can ignore error. 
+					continue;
+				}
+				else
+				{
+					// Terminate. Return ERROR.
+					return state;
+				}
+			}
+			else
+			{
+				// Success or Running
+				if (state == BehaviorTree::NODE_STATE::RUNNING)
+				{
+					// Set this node as running child
+					this->runningChildIndex = i;
+				}
+				// Else if status was SUCCESS, return.
+				return state;
+			}
+		}
+	}
+
+	// Everything failed.
+	return BehaviorTree::NODE_STATE::FAILURE;
 }
 
 BehaviorTree::CompositeNode::~CompositeNode()
 {
+	// Delete children
 	for (auto child : this->children)
 	{
 		if (child != nullptr)
@@ -147,73 +266,52 @@ BehaviorTree::CompositeNode::~CompositeNode()
 			delete child;
 		}
 	}
+
+	this->children.clear();
 }
 
 
 
-BehaviorTree::Selector::Selector(Node* child) : BehaviorTree::CompositeNode(child) {}
+
+
+BehaviorTree::Selector::Selector(BehaviorTree::Node* child) : BehaviorTree::CompositeNode(child) {}
 
 BehaviorTree::Selector::Selector(const std::vector<Node*>& children) : BehaviorTree::CompositeNode(children) {}
 
 BehaviorTree::Selector::~Selector() {}
 
-const BehaviorTree::NODE_STATUS BehaviorTree::Selector::update(const float delta)
+const BehaviorTree::NODE_STATE BehaviorTree::Selector::update(const float delta)
 {
 	int start = 0;
-	int size = static_cast<int>(this->children.size());
-
-	//check if this selector has running child and make sure it's in the range
-	if (this->runningChildIndex >= 0 && this->runningChildIndex < size)
+	
+	// Update running child if there's one.
+	if (this->isRunningChildIndexValid())
 	{
-		//has running child
-		BehaviorTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
+		const BehaviorTree::NODE_STATE runningChildstate = BehaviorTree::CompositeNode::updateRunningChild(delta, start);
 
-		if (status == BehaviorTree::NODE_STATUS::RUNNING)
+		if (runningChildstate == BehaviorTree::NODE_STATE::SUCCESS || 
+			runningChildstate == BehaviorTree::NODE_STATE::RUNNING)
 		{
-			//still running
-			return status;
+			// Stop and return
+			return runningChildstate;
 		}
-		else if (status == BehaviorTree::NODE_STATUS::SUCCESS)
+		else if (runningChildstate == BehaviorTree::NODE_STATE::ERROR)
 		{
-			//success. remove running child
-			this->runningChildIndex = -1;
-			//because it's selector, end ehre
-			return status;
-		}
-		else
-		{
-			//else, it failed or invalid. keep continue if there's more
-			start = runningChildIndex;
-		}
-	}
-	//else, there was no running child
-
-	//if there was a running child and it failed, continue from it and execute next child if there's any
-	for (int i = start; i < size; i++)
-	{
-		if (this->children.at(i) != nullptr)
-		{
-			BehaviorTree::NODE_STATUS status = this->children.at(i)->update(delta);
-			if (status != BehaviorTree::NODE_STATUS::FAILURE)
+			// It was error.
+			if (BehaviorTree::IGNORE_ERROR == false)
 			{
-				if (status == BehaviorTree::NODE_STATUS::RUNNING)
-				{
-					//Set this node as running child
-					this->runningChildIndex = i;
-				}
-
-				return status;
-			}
-			else
-			{
-				continue;
+				// Can't ignore error. Return.
+				return BehaviorTree::NODE_STATE::ERROR;
 			}
 		}
+		// Else, it was either FAILURE or ERROR that can be ignored.
 	}
 
-	return BehaviorTree::NODE_STATUS::FAILURE;
+	// Update children
+	return this->updateChildren(start, delta, BehaviorTree::NODE_STATE::FAILURE);
 }
 
+/*
 BehaviorTree::Selector* BehaviorTree::Selector::clone()
 {
 	BehaviorTree::Selector* newSelector = nullptr;
@@ -229,19 +327,21 @@ BehaviorTree::Selector* BehaviorTree::Selector::clone()
 	
 	return newSelector;
 }
+*/
 
 
 
 
-BehaviorTree::RandomSelector::RandomSelector(Node* child) : BehaviorTree::Selector(child) {}
+
+BehaviorTree::RandomSelector::RandomSelector(BehaviorTree::Node* child) : BehaviorTree::Selector(child) {}
 
 BehaviorTree::RandomSelector::RandomSelector(const std::vector<Node*>& children) : BehaviorTree::Selector(children) {}
 
 BehaviorTree::RandomSelector::~RandomSelector() {}
 
-const BehaviorTree::NODE_STATUS BehaviorTree::RandomSelector::update(const float delta)
+const BehaviorTree::NODE_STATE BehaviorTree::RandomSelector::update(const float delta)
 {
-	//No need to shuffle children if there's only one child
+	// No need to shuffle children if there's only one child
 	if (this->children.size() > 1 && this->runningChildIndex < 0)
 	{
 		auto engine = std::default_random_engine{};
@@ -251,15 +351,10 @@ const BehaviorTree::NODE_STATUS BehaviorTree::RandomSelector::update(const float
 	return BehaviorTree::Selector::update(delta);
 }
 
-BehaviorTree::RandomSelector* BehaviorTree::RandomSelector::clone()
-{
-	return static_cast<BehaviorTree::RandomSelector*>(BehaviorTree::Selector::clone());
-}
 
 
 
-
-BehaviorTree::Sequence::Sequence(Node* child) : BehaviorTree::CompositeNode(child)
+BehaviorTree::Sequence::Sequence(BehaviorTree::Node* child) : BehaviorTree::CompositeNode(child)
 {}
 
 BehaviorTree::Sequence::Sequence(const std::vector<Node*>& children) : BehaviorTree::CompositeNode(children)
@@ -267,77 +362,43 @@ BehaviorTree::Sequence::Sequence(const std::vector<Node*>& children) : BehaviorT
 
 BehaviorTree::Sequence::~Sequence() {}
 
-const BehaviorTree::NODE_STATUS BehaviorTree::Sequence::update(const float delta)
+const BehaviorTree::NODE_STATE BehaviorTree::Sequence::update(const float delta)
 {
 	int start = 0;
-	int size = static_cast<int>(this->children.size());
 
-	//check if this selector has running child and make sure it's in the range
-	if (this->runningChildIndex >= 0 && this->runningChildIndex < size)
+	// Update running child if there's one.
+	if (this->isRunningChildIndexValid())
 	{
-		//has running child
-		BehaviorTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
-		if (status != BehaviorTree::NODE_STATUS::RUNNING)
-		{
-			//not running anymore. Clear index.
-			this->runningChildIndex = -1;
-		}
-		//else, status was not running anymore. Either success, failure or invalid
-		else if (status != BehaviorTree::NODE_STATUS::SUCCESS)
-		{
-			//if was not success, which means it failed or invalid. End seqeunce.
-			return status;
-		}
-		//else, it succeeded
-		start = runningChildIndex;
-	}
-	//else, there was no running child
+		const BehaviorTree::NODE_STATE runningChildstate = BehaviorTree::CompositeNode::updateRunningChild(delta, start);
 
-	//if there was a running child and it succeded, continue from it and execute next child if there's any
-	for (int i = start; i < size; i++)
-	{
-		if (this->children.at(i) != nullptr)
+		if (runningChildstate == BehaviorTree::NODE_STATE::FAILURE ||
+			runningChildstate == BehaviorTree::NODE_STATE::RUNNING)
 		{
-			BehaviorTree::NODE_STATUS status = this->children.at(i)->update(delta);
-			if (status != BehaviorTree::NODE_STATUS::SUCCESS)
+			// If failed, stop sequence.
+			// If it's still running, keep running.
+			return runningChildstate;
+		}
+		else if (runningChildstate == BehaviorTree::NODE_STATE::ERROR)
+		{
+			// Error occured
+			if (BehaviorTree::IGNORE_ERROR == false)
 			{
-				if (status == BehaviorTree::NODE_STATUS::RUNNING)
-				{
-					//Set this node as running child
-					this->runningChildIndex = i;
-				}
-
-				return status;
+				// Can't ignore error. Return.
+				return runningChildstate;
 			}
-			else
-			{
-				continue;
-			}
+			// Else, this error can be ignored and considered as SUCCESS. keep go on.
 		}
+		// Else, if status is SUCCESS, keep go on.
 	}
 
-	return BehaviorTree::NODE_STATUS::SUCCESS;
-}
-
-BehaviorTree::Sequence* BehaviorTree::Sequence::clone()
-{
-	BehaviorTree::Sequence* newSequence = nullptr;
-
-	std::vector<Node*> childrenClones;
-
-	for (auto child : this->children)
-	{
-		childrenClones.push_back(child->clone());
-	}
-
-	newSequence = new Sequence(childrenClones);
-
-	return newSequence;
+	// Update children
+	return this->updateChildren(start, delta, BehaviorTree::NODE_STATE::SUCCESS);
 }
 
 
 
-BehaviorTree::RandomSequence::RandomSequence(Node* child) : BehaviorTree::Sequence(child)
+
+BehaviorTree::RandomSequence::RandomSequence(BehaviorTree::Node* child) : BehaviorTree::Sequence(child)
 {}
 
 BehaviorTree::RandomSequence::RandomSequence(const std::vector<Node*>& children) : BehaviorTree::Sequence(children)
@@ -345,7 +406,7 @@ BehaviorTree::RandomSequence::RandomSequence(const std::vector<Node*>& children)
 
 BehaviorTree::RandomSequence::~RandomSequence() {}
 
-const BehaviorTree::NODE_STATUS BehaviorTree::RandomSequence::update(const float delta)
+const BehaviorTree::NODE_STATE BehaviorTree::RandomSequence::update(const float delta)
 {
 	//No need to shuffle children if there's only one child.
 	if (this->children.size() > 1)
@@ -357,16 +418,11 @@ const BehaviorTree::NODE_STATUS BehaviorTree::RandomSequence::update(const float
 	return BehaviorTree::Sequence::update(delta);
 }
 
-BehaviorTree::RandomSequence* BehaviorTree::RandomSequence::clone()
-{
-	return static_cast<BehaviorTree::RandomSequence*>(BehaviorTree::Sequence::clone());
-}
 
 
 
 
-
-BehaviorTree::DecoratorNode::DecoratorNode(Node* child)
+BehaviorTree::DecoratorNode::DecoratorNode(BehaviorTree::Node* child)
 {
 	addChild(child);
 }
@@ -379,145 +435,307 @@ BehaviorTree::DecoratorNode::~DecoratorNode()
 	}
 }
 
-void BehaviorTree::DecoratorNode::addChild(Node* child)
+void BehaviorTree::DecoratorNode::addChild(BehaviorTree::Node* child, const bool overwrite)
 {
-	if (child != nullptr)
+	if (child == nullptr)
 	{
 		this->child = child;
 	}
+	else
+	{
+		if (overwrite)
+		{
+			delete this->child;
+			this->child = nullptr;
+			this->child = child;
+		}
+	}
 }
 
-BehaviorTree::Inverter::Inverter(Node* child) : BehaviorTree::DecoratorNode(child)
-{}
 
-const BehaviorTree::NODE_STATUS BehaviorTree::Inverter::update(const float delta)
+
+
+BehaviorTree::Inverter::Inverter() : BehaviorTree::DecoratorNode(nullptr) {}
+
+BehaviorTree::Inverter::Inverter(BehaviorTree::Node* child) : BehaviorTree::DecoratorNode(child) {}
+
+const BehaviorTree::NODE_STATE BehaviorTree::Inverter::update(const float delta)
 {
-	BehaviorTree::NODE_STATUS status = this->child->update(delta);
-
-	if (status == BehaviorTree::NODE_STATUS::RUNNING || status == BehaviorTree::NODE_STATUS::INVALID)
+	// Update child
+	if (this->child == nullptr)
 	{
-		return status;
+		// Doesn't have child. Return ERROR
+		return BehaviorTree::NODE_STATE::ERROR;
+	}
+
+	BehaviorTree::NODE_STATE state = this->child->update(delta);
+
+	if (state == BehaviorTree::NODE_STATE::RUNNING || state == BehaviorTree::NODE_STATE::ERROR)
+	{
+		return state;
 	}
 	else
 	{
-		return status == BehaviorTree::NODE_STATUS::SUCCESS ? BehaviorTree::NODE_STATUS::FAILURE : BehaviorTree::NODE_STATUS::SUCCESS;
+		// If status was SUCCESS or FAILURE, invert result.
+		return state == BehaviorTree::NODE_STATE::SUCCESS ? BehaviorTree::NODE_STATE::FAILURE : BehaviorTree::NODE_STATE::SUCCESS;
 	}
 
 }
 
-BehaviorTree::Inverter* BehaviorTree::Inverter::clone()
+
+
+
+
+BehaviorTree::Succeeder::Succeeder() : BehaviorTree::DecoratorNode(nullptr) {}
+
+BehaviorTree::Succeeder::Succeeder(BehaviorTree::Node* child) : BehaviorTree::DecoratorNode(child) {}
+
+const BehaviorTree::NODE_STATE BehaviorTree::Succeeder::update(const float delta)
 {
-	return new Inverter(this->child->clone());
-}
+	if (this->child == nullptr)
+	{
+		return BehaviorTree::NODE_STATE::ERROR;
+	}
 
-
-
-
-BehaviorTree::Succeeder::Succeeder(Node* child) : BehaviorTree::DecoratorNode(child)
-{}
-
-const BehaviorTree::NODE_STATUS BehaviorTree::Succeeder::update(const float delta)
-{
+	// Update child. We don't need the result
 	this->child->update(delta);
-	return BehaviorTree::NODE_STATUS::SUCCESS;
-}
-
-BehaviorTree::Succeeder* BehaviorTree::Succeeder::clone()
-{
-	return new Succeeder(this->child->clone());
+	// Always return SUCCSS.
+	return BehaviorTree::NODE_STATE::SUCCESS;
 }
 
 
 
-BehaviorTree::Failer::Failer(Node* child) : BehaviorTree::DecoratorNode(child)
-{}
 
-const BehaviorTree::NODE_STATUS BehaviorTree::Failer::update(const float delta)
+
+BehaviorTree::Failer::Failer() : BehaviorTree::DecoratorNode(nullptr) {}
+
+BehaviorTree::Failer::Failer(BehaviorTree::Node* child) : BehaviorTree::DecoratorNode(child) {}
+
+const BehaviorTree::NODE_STATE BehaviorTree::Failer::update(const float delta)
 {
+	if (this->child == nullptr)
+	{
+		return BehaviorTree::NODE_STATE::ERROR;
+	}
+
+	// Update child. We don't need the result
 	this->child->update(delta);
-	return BehaviorTree::NODE_STATUS::FAILURE;
-}
-
-BehaviorTree::Failer* BehaviorTree::Failer::clone()
-{
-	return new Failer(this->child->clone());
+	// Always return FAILURE.
+	return BehaviorTree::NODE_STATE::FAILURE;
 }
 
 
 
 
-BehaviorTree::Repeater::Repeater(Node* child, const int repeat) : BehaviorTree::DecoratorNode(child), repeat(repeat)
-{}
-
-const BehaviorTree::NODE_STATUS BehaviorTree::Repeater::update(const float delta)
+BehaviorTree::Repeat::Repeat(const int repeat) : BehaviorTree::DecoratorNode(nullptr)
 {
+	if (repeat < 0)
+	{
+		this->repeat = 0;
+	}
+}
+
+BehaviorTree::Repeat::Repeat(BehaviorTree::Node* child, const int repeat) : BehaviorTree::DecoratorNode(child)
+{
+	if (repeat < 0)
+	{
+		this->repeat = 0;
+	}
+}
+
+void BehaviorTree::Repeat::setRepeat(const int repeat)
+{
+	if (repeat < 0)
+	{
+		this->repeat = 0;
+	}
+	else
+	{
+		this->repeat = repeat;
+	}
+}
+
+
+
+
+BehaviorTree::Repeater::Repeater(const int repeat) : BehaviorTree::Repeat(repeat) 
+{
+	if (repeat == BehaviorTree::Repeat::REPEAT_INFINITE)
+	{
+		// Repeater can't have infinite because it faills to infinite loop
+		this->repeat = 0;
+	}
+}
+
+BehaviorTree::Repeater::Repeater(BehaviorTree::Node* child, const int repeat) : BehaviorTree::Repeat(child, repeat)
+{
+	if (repeat == BehaviorTree::Repeat::REPEAT_INFINITE)
+	{
+		// Repeater can't have infinite because it faills to infinite loop
+		this->repeat = 0;
+	}
+}
+
+const BehaviorTree::NODE_STATE BehaviorTree::Repeater::update(const float delta)
+{
+	if (this->repeat == 0)
+	{
+		return BehaviorTree::NODE_STATE::ERROR;
+	}
+
+	// Repeat update for certain amount of times.
 	for (int i = 0; i < repeat; i++)
 	{
-		BehaviorTree::NODE_STATUS status = this->child->update(delta);
-		if (status == BehaviorTree::NODE_STATUS::SUCCESS || status == BehaviorTree::NODE_STATUS::FAILURE)
+		// Update child.
+		BehaviorTree::NODE_STATE state = this->child->update(delta);
+		if (state == BehaviorTree::NODE_STATE::SUCCESS || state == BehaviorTree::NODE_STATE::FAILURE)
 		{
+			// If status was SUCCESS or FAILURE, keep go on
 			continue;
 		}
 		else
 		{
-			return status;
+			return state;
 		}
 	}
-
-	return BehaviorTree::NODE_STATUS::SUCCESS;
-}
-
-BehaviorTree::Repeater* BehaviorTree::Repeater::clone()
-{
-	return new Repeater(this->child->clone(), this->repeat);
+	
+	// Finished repeating. Return SUCCESS
+	return BehaviorTree::NODE_STATE::SUCCESS;
 }
 
 
 
 
-BehaviorTree::Locker::Locker(Node* child, const float duration) : BehaviorTree::DecoratorNode(child), elapsedTime(0), duration(duration) {}
+BehaviorTree::RepeatUntil::RepeatUntil(const int repeat, const BehaviorTree::NODE_STATE conditionStatus) : BehaviorTree::Repeat(repeat), desiredStatus(conditionStatus) {}
 
-const BehaviorTree::NODE_STATUS BehaviorTree::Locker::update(const float delta)
+BehaviorTree::RepeatUntil::RepeatUntil(BehaviorTree::Node* child, const int repeat, const BehaviorTree::NODE_STATE conditionStatus) : BehaviorTree::Repeat(child, repeat), desiredStatus(conditionStatus) {}
+
+const BehaviorTree::NODE_STATE BehaviorTree::RepeatUntil::update(const float delta)
 {
-	//cocos2d::log("BehaviorTree::Locker");
-	if (statusResult == BehaviorTree::NODE_STATUS::NONE || statusResult == BehaviorTree::NODE_STATUS::RUNNING)
+	if (this->repeat == 0)
 	{
-		//keep update node if it none(fresh execution) or running(continue updating)
-		statusResult = child->update(delta);
+		return BehaviorTree::NODE_STATE::ERROR;
 	}
 
-	if (statusResult == BehaviorTree::NODE_STATUS::RUNNING || statusResult == BehaviorTree::NODE_STATUS::INVALID)
+	if (this->repeat == BehaviorTree::Repeat::REPEAT_INFINITE)
 	{
-		//if running, keep update. If invalid, gg.
-		return statusResult;
+		BehaviorTree::NODE_STATE state;
+		// Run infitie loop until status is failure
+		do
+		{
+			// Update child.
+			state = this->child->update(delta);
+		} while (state != this->desiredStatus);
+
+		// Finished repeating. Return SUCCESS
+		return BehaviorTree::NODE_STATE::SUCCESS;
 	}
 	else
 	{
-		//result was either success or fail. Count time
-		elapsedTime += delta;
+		// Repeat update for certain amount of times.
+		for (int i = 0; i < this->repeat; i++)
+		{
+			// Update child.
+			BehaviorTree::NODE_STATE state = this->child->update(delta);
+			if (state == this->desiredStatus)
+			{
+				// Failed. return success.
+				return BehaviorTree::NODE_STATE::SUCCESS;
+			}
+			// Else, continue.
+		}
 
-		if (elapsedTime < duration)
-		{
-			//lock. Return running to keep run this node
-			return BehaviorTree::NODE_STATUS::RUNNING;
-		}
-		else
-		{
-			//end.
-			BehaviorTree::NODE_STATUS result = statusResult;
-			reset();
-			return result;
-		}
+		// Finished repeating. Haven't failed. Return FAILURE
+		return BehaviorTree::NODE_STATE::FAILURE;
 	}
 }
 
-BehaviorTree::Locker* BehaviorTree::Locker::clone()
+
+
+
+
+
+BehaviorTree::RepeatUntilFail::RepeatUntilFail(const int repeat) : BehaviorTree::RepeatUntil(repeat, BehaviorTree::NODE_STATE::FAILURE) {}
+
+BehaviorTree::RepeatUntilFail::RepeatUntilFail(BehaviorTree::Node* child, const int repeat) : BehaviorTree::RepeatUntil(child, repeat, BehaviorTree::NODE_STATE::FAILURE) {}
+
+
+
+
+
+BehaviorTree::RepeatUntilSuccess::RepeatUntilSuccess(const int repeat) : BehaviorTree::RepeatUntil(repeat, BehaviorTree::NODE_STATE::SUCCESS) {}
+
+BehaviorTree::RepeatUntilSuccess::RepeatUntilSuccess(BehaviorTree::Node* child, const int repeat) : BehaviorTree::RepeatUntil(child, repeat, BehaviorTree::NODE_STATE::SUCCESS) {}
+
+
+
+
+BehaviorTree::Limiter::Limiter(const int limit) : BehaviorTree::DecoratorNode(nullptr), limit(limit), limitCount(0) {}
+
+BehaviorTree::Limiter::Limiter(BehaviorTree::Node* child, const int limit) : BehaviorTree::DecoratorNode(child), limit(limit), limitCount(0) {}
+
+const BehaviorTree::NODE_STATE BehaviorTree::Limiter::update(const float delta)
 {
-	return new Locker(this->child->clone(), this->duration);
+	if (this->child == nullptr)
+	{
+		return BehaviorTree::NODE_STATE::ERROR;
+	}
+
+	if (this->limitCount < this->limit)
+	{
+		// Still can execute this node
+		BehaviorTree::NODE_STATE state = this->child->update(delta);
+		this->limitCount++;
+
+		return state;
+	}
+
+	return BehaviorTree::NODE_STATE::FAILURE;
 }
 
-void BehaviorTree::Locker::reset()
+
+
+
+BehaviorTree::DelayTime::DelayTime(const float duration, const bool delayOnce) : BehaviorTree::DecoratorNode(nullptr), duration(duration), elapsedTime(0), delayOnce(delayOnce), childUpdateFinished(false) {}
+
+BehaviorTree::DelayTime::DelayTime(BehaviorTree::Node* child, const float duration, const bool delayOnce) : BehaviorTree::DecoratorNode(child), duration(duration), elapsedTime(0), delayOnce(delayOnce), childUpdateFinished(false) {}
+
+const BehaviorTree::NODE_STATE BehaviorTree::DelayTime::update(const float delta)
 {
-	statusResult = BehaviorTree::NODE_STATUS::NONE;
-	elapsedTime = 0;
+	if (this->child == nullptr)
+	{
+		return BehaviorTree::NODE_STATE::ERROR;
+	}
+
+	if (this->elapsedTime >= 0 && this->elapsedTime < this->duration)
+	{
+		// Delaying
+		this->elapsedTime += delta;
+		return BehaviorTree::NODE_STATE::RUNNING;
+	}
+	else
+	{
+		// Finished delaying
+		if (this->childUpdateFinished == false)
+		{
+			// Haven't finished child update yet
+			result = this->child->update(delta);
+
+			if (result != BehaviorTree::NODE_STATE::RUNNING)
+			{
+				// Either SUCCESS, FAILURE or ERROR. Update finished
+				this->childUpdateFinished = true;
+
+				if(this->delayOnce == false)
+				{
+					// Delay again
+					this->elapsedTime = 0;
+					this->childUpdateFinished = false;
+				}
+				// Else, only delaying once.
+			}
+		}
+		// Else, finished updating
+		return result;
+	}
 }
