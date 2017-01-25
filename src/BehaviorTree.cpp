@@ -25,9 +25,6 @@
 
 #include "BehaviorTree.h"
 
-BehaviorTree::Node::~Node()
-{}
-
 BehaviorTree::CompositeNode::CompositeNode() : Node(), maxChildren(BehaviorTree::INFINITE_CHILDREN), runningChildIndex(-1)
 {}
 
@@ -123,24 +120,22 @@ void BehaviorTree::CompositeNode::setMaxChildren(const int maxChildren, const bo
 		return;
 	}
 	
-	//new size is not infiite, 0, or bigger than current size.
-	size_t size = static_cast<size_t>(maxChildren);
-
-	std::vector<BehaviorTree::Node*> newChildren(this->children.begin(), this->children.begin() + size);
-	std::vector<BehaviorTree::Node*> remaining(this->children.begin() + size, this->children.end());
-
+	//new size is not infiite, 0, or bigger and equal than current size.
 	if (cleanUpRemains)
 	{
-		for (auto node : remaining)
+		int i = maxChildren;
+		int childrenSize = static_cast<int>(this->children.size());
+		for (; i < childrenSize; i)
 		{
-			if (node != nullptr)
+			if (this->children.at(i) != nullptr)
 			{
-				delete node;
+				delete this->children.at(i);
 			}
 		}
 	}
 
-	this->children = newChildren;
+	// Resize
+	this->children.resize(maxChildren);
 }
 
 BehaviorTree::CompositeNode::~CompositeNode()
@@ -500,7 +495,7 @@ const BehaviorTree::NODE_STATUS BehaviorTree::Locker::update(const float delta)
 	{
 		//result was either success or fail. Count time
 		elapsedTime += delta;
-		//cocos2d::log("BehaviorTree::Locker waiting... %f / %f", elapsedTime, duration);
+
 		if (elapsedTime < duration)
 		{
 			//lock. Return running to keep run this node
