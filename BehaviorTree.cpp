@@ -1,22 +1,47 @@
+///////////////////////////////////////////////////////////////////////
+// Behavior Tree
+// Copyright (c) 2017 Seung Youp Baek <bsy6766@gmail.com>
+//
+// This software is provided 'as-is', without any express or implied
+// warranty. In no event will the authors be held liable for any
+// damages arising from the use of this software.
+//
+// Permission is granted to anyone to use this software for any
+// purpose, including commercial applications, and to alter it and
+// redistribute it freely, subject to the following restrictions:
+//
+//  1. The origin of this software must not be misrepresented; you
+//     must not claim that you wrote the original software. If you use
+//     this software in a product, an acknowledgment in the product
+//     documentation would be appreciated but is not required.
+//
+//  2. Altered source versions must be plainly marked as such, and
+//     must not be misrepresented as being the original software.
+//
+//  3. This notice may not be removed or altered from any source
+//     distribution.
+//
+///////////////////////////////////////////////////////////////////////
+
 #include "BehaviorTree.h"
 
-MGD::BTree::Node::~Node()
+BTree::Node::~Node()
 {}
 
-MGD::BTree::CompositeNode::CompositeNode() : Node(), maxChildren(MGD::BTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BTree::CompositeNode::CompositeNode() : Node(), maxChildren(BTree::INFINITE_CHILDREN), runningChildIndex(-1)
 {}
 
-MGD::BTree::CompositeNode::CompositeNode(Node* child) : Node(), maxChildren(MGD::BTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BTree::CompositeNode::CompositeNode(Node* child) : Node(), maxChildren(BTree::INFINITE_CHILDREN), runningChildIndex(-1)
 {
 	this->addChild(child);
 }
 
-MGD::BTree::CompositeNode::CompositeNode(const std::vector<Node*>& children) : Node(), maxChildren(MGD::BTree::INFINITE_CHILDREN), runningChildIndex(-1)
+BTree::CompositeNode::CompositeNode(const std::vector<Node*>& children) : Node(), maxChildren(BTree::INFINITE_CHILDREN), runningChildIndex(-1)
 {
 	this->addChildren(children);
 }
 
-void MGD::BTree::CompositeNode::addChild(Node* child)
+void BTree::CompositeNode::addChild(Node* child)
 {
 	if (child != nullptr)
 	{
@@ -24,7 +49,7 @@ void MGD::BTree::CompositeNode::addChild(Node* child)
 	}
 }
 
-void MGD::BTree::CompositeNode::addChildren(const std::vector<Node*>& children)
+void BTree::CompositeNode::addChildren(const std::vector<Node*>& children)
 {
 	if (this->maxChildren > 0)
 	{
@@ -47,12 +72,12 @@ void MGD::BTree::CompositeNode::addChildren(const std::vector<Node*>& children)
 	}
 }
 
-const std::vector<MGD::BTree::Node*>& MGD::BTree::CompositeNode::getChildren()
+const std::vector<BTree::Node*>& BTree::CompositeNode::getChildren()
 {
 	return this->children;
 }
 
-void MGD::BTree::CompositeNode::clearChildren(const bool cleanUp)
+void BTree::CompositeNode::clearChildren(const bool cleanUp)
 {
 	if (cleanUp)
 	{
@@ -68,7 +93,7 @@ void MGD::BTree::CompositeNode::clearChildren(const bool cleanUp)
 	this->children.clear();
 }
 
-void MGD::BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool cleanUpRemains)
+void BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool cleanUpRemains)
 {
 	//can't be 0
 	if (maxChildren == 0)
@@ -77,7 +102,7 @@ void MGD::BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool
 	}
 
 	//make infinite
-	if (maxChildren == MGD::BTree::INFINITE_CHILDREN)
+	if (maxChildren == BTree::INFINITE_CHILDREN)
 	{
 		this->maxChildren = maxChildren;
 		return;
@@ -101,8 +126,8 @@ void MGD::BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool
 	//new size is not infiite, 0, or bigger than current size.
 	size_t size = static_cast<size_t>(maxChildren);
 
-	std::vector<MGD::BTree::Node*> newChildren(this->children.begin(), this->children.begin() + size);
-	std::vector<MGD::BTree::Node*> remaining(this->children.begin() + size, this->children.end());
+	std::vector<BTree::Node*> newChildren(this->children.begin(), this->children.begin() + size);
+	std::vector<BTree::Node*> remaining(this->children.begin() + size, this->children.end());
 
 	if (cleanUpRemains)
 	{
@@ -118,7 +143,7 @@ void MGD::BTree::CompositeNode::setMaxChildren(const int maxChildren, const bool
 	this->children = newChildren;
 }
 
-MGD::BTree::CompositeNode::~CompositeNode()
+BTree::CompositeNode::~CompositeNode()
 {
 	for (auto child : this->children)
 	{
@@ -131,13 +156,13 @@ MGD::BTree::CompositeNode::~CompositeNode()
 
 
 
-MGD::BTree::Selector::Selector(Node* child) : MGD::BTree::CompositeNode(child) {}
+BTree::Selector::Selector(Node* child) : BTree::CompositeNode(child) {}
 
-MGD::BTree::Selector::Selector(const std::vector<Node*>& children) : MGD::BTree::CompositeNode(children) {}
+BTree::Selector::Selector(const std::vector<Node*>& children) : BTree::CompositeNode(children) {}
 
-MGD::BTree::Selector::~Selector() {}
+BTree::Selector::~Selector() {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::Selector::update(const float delta)
+const BTree::NODE_STATUS BTree::Selector::update(const float delta)
 {
 	int start = 0;
 	int size = static_cast<int>(this->children.size());
@@ -146,14 +171,14 @@ const MGD::BTree::NODE_STATUS MGD::BTree::Selector::update(const float delta)
 	if (this->runningChildIndex >= 0 && this->runningChildIndex < size)
 	{
 		//has running child
-		MGD::BTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
+		BTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
 
-		if (status == MGD::BTree::NODE_STATUS::RUNNING)
+		if (status == BTree::NODE_STATUS::RUNNING)
 		{
 			//still running
 			return status;
 		}
-		else if (status == MGD::BTree::NODE_STATUS::SUCCESS)
+		else if (status == BTree::NODE_STATUS::SUCCESS)
 		{
 			//success. remove running child
 			this->runningChildIndex = -1;
@@ -173,10 +198,10 @@ const MGD::BTree::NODE_STATUS MGD::BTree::Selector::update(const float delta)
 	{
 		if (this->children.at(i) != nullptr)
 		{
-			MGD::BTree::NODE_STATUS status = this->children.at(i)->update(delta);
-			if (status != MGD::BTree::NODE_STATUS::FAILURE)
+			BTree::NODE_STATUS status = this->children.at(i)->update(delta);
+			if (status != BTree::NODE_STATUS::FAILURE)
 			{
-				if (status == MGD::BTree::NODE_STATUS::RUNNING)
+				if (status == BTree::NODE_STATUS::RUNNING)
 				{
 					//Set this node as running child
 					this->runningChildIndex = i;
@@ -191,12 +216,12 @@ const MGD::BTree::NODE_STATUS MGD::BTree::Selector::update(const float delta)
 		}
 	}
 
-	return MGD::BTree::NODE_STATUS::FAILURE;
+	return BTree::NODE_STATUS::FAILURE;
 }
 
-MGD::BTree::Selector* MGD::BTree::Selector::clone()
+BTree::Selector* BTree::Selector::clone()
 {
-	MGD::BTree::Selector* newSelector = nullptr;
+	BTree::Selector* newSelector = nullptr;
 
 	std::vector<Node*> childrenClones;
 
@@ -213,13 +238,13 @@ MGD::BTree::Selector* MGD::BTree::Selector::clone()
 
 
 
-MGD::BTree::RandomSelector::RandomSelector(Node* child) : MGD::BTree::Selector(child) {}
+BTree::RandomSelector::RandomSelector(Node* child) : BTree::Selector(child) {}
 
-MGD::BTree::RandomSelector::RandomSelector(const std::vector<Node*>& children) : MGD::BTree::Selector(children) {}
+BTree::RandomSelector::RandomSelector(const std::vector<Node*>& children) : BTree::Selector(children) {}
 
-MGD::BTree::RandomSelector::~RandomSelector() {}
+BTree::RandomSelector::~RandomSelector() {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::RandomSelector::update(const float delta)
+const BTree::NODE_STATUS BTree::RandomSelector::update(const float delta)
 {
 	//No need to shuffle children if there's only one child
 	if (this->children.size() > 1 && this->runningChildIndex < 0)
@@ -228,26 +253,26 @@ const MGD::BTree::NODE_STATUS MGD::BTree::RandomSelector::update(const float del
 		std::shuffle(std::begin(this->children), std::end(this->children), engine);
 	}
 	
-	return MGD::BTree::Selector::update(delta);
+	return BTree::Selector::update(delta);
 }
 
-MGD::BTree::RandomSelector* MGD::BTree::RandomSelector::clone()
+BTree::RandomSelector* BTree::RandomSelector::clone()
 {
-	return static_cast<MGD::BTree::RandomSelector*>(MGD::BTree::Selector::clone());
+	return static_cast<BTree::RandomSelector*>(BTree::Selector::clone());
 }
 
 
 
 
-MGD::BTree::Sequence::Sequence(Node* child) : MGD::BTree::CompositeNode(child)
+BTree::Sequence::Sequence(Node* child) : BTree::CompositeNode(child)
 {}
 
-MGD::BTree::Sequence::Sequence(const std::vector<Node*>& children) : MGD::BTree::CompositeNode(children)
+BTree::Sequence::Sequence(const std::vector<Node*>& children) : BTree::CompositeNode(children)
 {}
 
-MGD::BTree::Sequence::~Sequence() {}
+BTree::Sequence::~Sequence() {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::Sequence::update(const float delta)
+const BTree::NODE_STATUS BTree::Sequence::update(const float delta)
 {
 	int start = 0;
 	int size = static_cast<int>(this->children.size());
@@ -256,14 +281,14 @@ const MGD::BTree::NODE_STATUS MGD::BTree::Sequence::update(const float delta)
 	if (this->runningChildIndex >= 0 && this->runningChildIndex < size)
 	{
 		//has running child
-		MGD::BTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
-		if (status != MGD::BTree::NODE_STATUS::RUNNING)
+		BTree::NODE_STATUS status = this->children.at(this->runningChildIndex)->update(delta);
+		if (status != BTree::NODE_STATUS::RUNNING)
 		{
 			//not running anymore. Clear index.
 			this->runningChildIndex = -1;
 		}
 		//else, status was not running anymore. Either success, failure or invalid
-		else if (status != MGD::BTree::NODE_STATUS::SUCCESS)
+		else if (status != BTree::NODE_STATUS::SUCCESS)
 		{
 			//if was not success, which means it failed or invalid. End seqeunce.
 			return status;
@@ -278,10 +303,10 @@ const MGD::BTree::NODE_STATUS MGD::BTree::Sequence::update(const float delta)
 	{
 		if (this->children.at(i) != nullptr)
 		{
-			MGD::BTree::NODE_STATUS status = this->children.at(i)->update(delta);
-			if (status != MGD::BTree::NODE_STATUS::SUCCESS)
+			BTree::NODE_STATUS status = this->children.at(i)->update(delta);
+			if (status != BTree::NODE_STATUS::SUCCESS)
 			{
-				if (status == MGD::BTree::NODE_STATUS::RUNNING)
+				if (status == BTree::NODE_STATUS::RUNNING)
 				{
 					//Set this node as running child
 					this->runningChildIndex = i;
@@ -296,12 +321,12 @@ const MGD::BTree::NODE_STATUS MGD::BTree::Sequence::update(const float delta)
 		}
 	}
 
-	return MGD::BTree::NODE_STATUS::SUCCESS;
+	return BTree::NODE_STATUS::SUCCESS;
 }
 
-MGD::BTree::Sequence* MGD::BTree::Sequence::clone()
+BTree::Sequence* BTree::Sequence::clone()
 {
-	MGD::BTree::Sequence* newSequence = nullptr;
+	BTree::Sequence* newSequence = nullptr;
 
 	std::vector<Node*> childrenClones;
 
@@ -317,15 +342,15 @@ MGD::BTree::Sequence* MGD::BTree::Sequence::clone()
 
 
 
-MGD::BTree::RandomSequence::RandomSequence(Node* child) : MGD::BTree::Sequence(child)
+BTree::RandomSequence::RandomSequence(Node* child) : BTree::Sequence(child)
 {}
 
-MGD::BTree::RandomSequence::RandomSequence(const std::vector<Node*>& children) : MGD::BTree::Sequence(children)
+BTree::RandomSequence::RandomSequence(const std::vector<Node*>& children) : BTree::Sequence(children)
 {}
 
-MGD::BTree::RandomSequence::~RandomSequence() {}
+BTree::RandomSequence::~RandomSequence() {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::RandomSequence::update(const float delta)
+const BTree::NODE_STATUS BTree::RandomSequence::update(const float delta)
 {
 	//No need to shuffle children if there's only one child.
 	if (this->children.size() > 1)
@@ -334,24 +359,24 @@ const MGD::BTree::NODE_STATUS MGD::BTree::RandomSequence::update(const float del
 		std::shuffle(std::begin(this->children), std::end(this->children), engine);
 	}
 
-	return MGD::BTree::Sequence::update(delta);
+	return BTree::Sequence::update(delta);
 }
 
-MGD::BTree::RandomSequence* MGD::BTree::RandomSequence::clone()
+BTree::RandomSequence* BTree::RandomSequence::clone()
 {
-	return static_cast<MGD::BTree::RandomSequence*>(MGD::BTree::Sequence::clone());
+	return static_cast<BTree::RandomSequence*>(BTree::Sequence::clone());
 }
 
 
 
 
 
-MGD::BTree::DecoratorNode::DecoratorNode(Node* child)
+BTree::DecoratorNode::DecoratorNode(Node* child)
 {
 	addChild(child);
 }
 
-MGD::BTree::DecoratorNode::~DecoratorNode()
+BTree::DecoratorNode::~DecoratorNode()
 {
 	if (this->child != nullptr)
 	{
@@ -359,7 +384,7 @@ MGD::BTree::DecoratorNode::~DecoratorNode()
 	}
 }
 
-void MGD::BTree::DecoratorNode::addChild(Node* child)
+void BTree::DecoratorNode::addChild(Node* child)
 {
 	if (child != nullptr)
 	{
@@ -367,25 +392,25 @@ void MGD::BTree::DecoratorNode::addChild(Node* child)
 	}
 }
 
-MGD::BTree::Inverter::Inverter(Node* child) : MGD::BTree::DecoratorNode(child)
+BTree::Inverter::Inverter(Node* child) : BTree::DecoratorNode(child)
 {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::Inverter::update(const float delta)
+const BTree::NODE_STATUS BTree::Inverter::update(const float delta)
 {
-	MGD::BTree::NODE_STATUS status = this->child->update(delta);
+	BTree::NODE_STATUS status = this->child->update(delta);
 
-	if (status == MGD::BTree::NODE_STATUS::RUNNING || status == MGD::BTree::NODE_STATUS::INVALID)
+	if (status == BTree::NODE_STATUS::RUNNING || status == BTree::NODE_STATUS::INVALID)
 	{
 		return status;
 	}
 	else
 	{
-		return status == MGD::BTree::NODE_STATUS::SUCCESS ? MGD::BTree::NODE_STATUS::FAILURE : MGD::BTree::NODE_STATUS::SUCCESS;
+		return status == BTree::NODE_STATUS::SUCCESS ? BTree::NODE_STATUS::FAILURE : BTree::NODE_STATUS::SUCCESS;
 	}
 
 }
 
-MGD::BTree::Inverter* MGD::BTree::Inverter::clone()
+BTree::Inverter* BTree::Inverter::clone()
 {
 	return new Inverter(this->child->clone());
 }
@@ -393,32 +418,32 @@ MGD::BTree::Inverter* MGD::BTree::Inverter::clone()
 
 
 
-MGD::BTree::Succeeder::Succeeder(Node* child) : MGD::BTree::DecoratorNode(child)
+BTree::Succeeder::Succeeder(Node* child) : BTree::DecoratorNode(child)
 {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::Succeeder::update(const float delta)
+const BTree::NODE_STATUS BTree::Succeeder::update(const float delta)
 {
 	this->child->update(delta);
-	return MGD::BTree::NODE_STATUS::SUCCESS;
+	return BTree::NODE_STATUS::SUCCESS;
 }
 
-MGD::BTree::Succeeder* MGD::BTree::Succeeder::clone()
+BTree::Succeeder* BTree::Succeeder::clone()
 {
 	return new Succeeder(this->child->clone());
 }
 
 
 
-MGD::BTree::Failer::Failer(Node* child) : MGD::BTree::DecoratorNode(child)
+BTree::Failer::Failer(Node* child) : BTree::DecoratorNode(child)
 {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::Failer::update(const float delta)
+const BTree::NODE_STATUS BTree::Failer::update(const float delta)
 {
 	this->child->update(delta);
-	return MGD::BTree::NODE_STATUS::FAILURE;
+	return BTree::NODE_STATUS::FAILURE;
 }
 
-MGD::BTree::Failer* MGD::BTree::Failer::clone()
+BTree::Failer* BTree::Failer::clone()
 {
 	return new Failer(this->child->clone());
 }
@@ -426,15 +451,15 @@ MGD::BTree::Failer* MGD::BTree::Failer::clone()
 
 
 
-MGD::BTree::Repeater::Repeater(Node* child, const int repeat) : MGD::BTree::DecoratorNode(child), repeat(repeat)
+BTree::Repeater::Repeater(Node* child, const int repeat) : BTree::DecoratorNode(child), repeat(repeat)
 {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::Repeater::update(const float delta)
+const BTree::NODE_STATUS BTree::Repeater::update(const float delta)
 {
 	for (int i = 0; i < repeat; i++)
 	{
-		MGD::BTree::NODE_STATUS status = this->child->update(delta);
-		if (status == MGD::BTree::NODE_STATUS::SUCCESS || status == MGD::BTree::NODE_STATUS::FAILURE)
+		BTree::NODE_STATUS status = this->child->update(delta);
+		if (status == BTree::NODE_STATUS::SUCCESS || status == BTree::NODE_STATUS::FAILURE)
 		{
 			continue;
 		}
@@ -444,10 +469,10 @@ const MGD::BTree::NODE_STATUS MGD::BTree::Repeater::update(const float delta)
 		}
 	}
 
-	return MGD::BTree::NODE_STATUS::SUCCESS;
+	return BTree::NODE_STATUS::SUCCESS;
 }
 
-MGD::BTree::Repeater* MGD::BTree::Repeater::clone()
+BTree::Repeater* BTree::Repeater::clone()
 {
 	return new Repeater(this->child->clone(), this->repeat);
 }
@@ -455,18 +480,18 @@ MGD::BTree::Repeater* MGD::BTree::Repeater::clone()
 
 
 
-MGD::BTree::Locker::Locker(Node* child, const float duration) : MGD::BTree::DecoratorNode(child), elapsedTime(0), duration(duration) {}
+BTree::Locker::Locker(Node* child, const float duration) : BTree::DecoratorNode(child), elapsedTime(0), duration(duration) {}
 
-const MGD::BTree::NODE_STATUS MGD::BTree::Locker::update(const float delta)
+const BTree::NODE_STATUS BTree::Locker::update(const float delta)
 {
 	//cocos2d::log("BTree::Locker");
-	if (statusResult == MGD::BTree::NODE_STATUS::NONE || statusResult == MGD::BTree::NODE_STATUS::RUNNING)
+	if (statusResult == BTree::NODE_STATUS::NONE || statusResult == BTree::NODE_STATUS::RUNNING)
 	{
 		//keep update node if it none(fresh execution) or running(continue updating)
 		statusResult = child->update(delta);
 	}
 
-	if (statusResult == MGD::BTree::NODE_STATUS::RUNNING || statusResult == MGD::BTree::NODE_STATUS::INVALID)
+	if (statusResult == BTree::NODE_STATUS::RUNNING || statusResult == BTree::NODE_STATUS::INVALID)
 	{
 		//if running, keep update. If invalid, gg.
 		return statusResult;
@@ -479,25 +504,25 @@ const MGD::BTree::NODE_STATUS MGD::BTree::Locker::update(const float delta)
 		if (elapsedTime < duration)
 		{
 			//lock. Return running to keep run this node
-			return MGD::BTree::NODE_STATUS::RUNNING;
+			return BTree::NODE_STATUS::RUNNING;
 		}
 		else
 		{
 			//end.
-			MGD::BTree::NODE_STATUS result = statusResult;
+			BTree::NODE_STATUS result = statusResult;
 			reset();
 			return result;
 		}
 	}
 }
 
-MGD::BTree::Locker* MGD::BTree::Locker::clone()
+BTree::Locker* BTree::Locker::clone()
 {
 	return new Locker(this->child->clone(), this->duration);
 }
 
-void MGD::BTree::Locker::reset()
+void BTree::Locker::reset()
 {
-	statusResult = MGD::BTree::NODE_STATUS::NONE;
+	statusResult = BTree::NODE_STATUS::NONE;
 	elapsedTime = 0;
 }
