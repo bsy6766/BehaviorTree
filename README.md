@@ -1,3 +1,5 @@
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/bsy6766/BehaviorTree/master/LICENSE)
+
 # BehaviorTree
 BehaviorTree with C++
 
