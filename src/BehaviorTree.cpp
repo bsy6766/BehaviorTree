@@ -333,22 +333,35 @@ BehaviorTree::Selector* BehaviorTree::Selector::clone()
 
 
 
-BehaviorTree::RandomSelector::RandomSelector(BehaviorTree::Node* child) : BehaviorTree::Selector(child) {}
+BehaviorTree::RandomSelector::RandomSelector(BehaviorTree::Node* child) : BehaviorTree::Selector(child), needShuffle(true) {}
 
-BehaviorTree::RandomSelector::RandomSelector(const std::vector<Node*>& children) : BehaviorTree::Selector(children) {}
+BehaviorTree::RandomSelector::RandomSelector(const std::vector<Node*>& children) : BehaviorTree::Selector(children), needShuffle(true) {}
 
 BehaviorTree::RandomSelector::~RandomSelector() {}
 
 const BehaviorTree::NODE_STATE BehaviorTree::RandomSelector::update(const float delta)
 {
 	// No need to shuffle children if there's only one child
-	if (this->children.size() > 1 && this->runningChildIndex < 0)
+	if (this->children.size() > 1 && this->runningChildIndex < 0 && needShuffle)
 	{
 		auto engine = std::default_random_engine{};
 		std::shuffle(std::begin(this->children), std::end(this->children), engine);
 	}
 	
-	return BehaviorTree::Selector::update(delta);
+	BehaviorTree::NODE_STATE state = BehaviorTree::Selector::update(delta);
+
+	if (state == BehaviorTree::NODE_STATE::RUNNING)
+	{
+		// If random selector is still running, don't shuffle
+		this->needShuffle = false;
+	}
+	else
+	{
+		// If random selector is not running, shuffle it!
+		this->needShuffle = true;
+	}
+
+	return state;
 }
 
 
@@ -408,14 +421,26 @@ BehaviorTree::RandomSequence::~RandomSequence() {}
 
 const BehaviorTree::NODE_STATE BehaviorTree::RandomSequence::update(const float delta)
 {
-	//No need to shuffle children if there's only one child.
-	if (this->children.size() > 1)
+	if (this->children.size() > 1 && this->runningChildIndex < 0 && needShuffle)
 	{
 		auto engine = std::default_random_engine{};
 		std::shuffle(std::begin(this->children), std::end(this->children), engine);
 	}
 
-	return BehaviorTree::Sequence::update(delta);
+	BehaviorTree::NODE_STATE state = BehaviorTree::Sequence::update(delta);
+
+	if (state == BehaviorTree::NODE_STATE::RUNNING)
+	{
+		// If random selector is still running, don't shuffle
+		this->needShuffle = false;
+	}
+	else
+	{
+		// If random selector is not running, shuffle it!
+		this->needShuffle = true;
+	}
+
+	return state;
 }
 
 

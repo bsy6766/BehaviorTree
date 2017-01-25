@@ -267,6 +267,8 @@ namespace BehaviorTree
 	*/
 	class RandomSelector : public Selector
 	{
+	private:
+		bool needShuffle;
 	public:
 		/**
 		*	@name RandomSelector
@@ -329,6 +331,8 @@ namespace BehaviorTree
 	*/
 	class RandomSequence : public Sequence
 	{
+	private:
+		bool needShuffle;
 	public:
 		/**
 		*	@name RandomSequence
