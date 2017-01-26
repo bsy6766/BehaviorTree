@@ -29,6 +29,7 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <memory>
 
 /**
 *	@mainpage Behavior Tree Documentaion
@@ -55,7 +56,7 @@ namespace BehaviorTree
 	*	Set this false to behavior tree terminate when ERROR is occured.
 	*	True by default.
 	*/
-	bool IGNORE_ERROR = true;
+	static bool IGNORE_ERROR = true;
 
 	/**
 	*	@enum BehaviorTree::NODE_STATUS
@@ -78,7 +79,7 @@ namespace BehaviorTree
 	*/
 	class Node
 	{
-	public:
+	protected:
 		//Default constructor
 		Node() = default;
 
@@ -87,10 +88,10 @@ namespace BehaviorTree
 
 		//Disable assign operator
 		void operator=(Node const&) = delete;
-
+	public:
 		//default virtual destructor
-		virtual ~Node() = default;
-
+		virtual ~Node() {};
+	public:
 		/**
 		*	@name update
 		*	@brief Updates the node.
@@ -104,12 +105,6 @@ namespace BehaviorTree
 		*	@return NODE_STATUS::ERROR Error occured.
 		*/
 		virtual const NODE_STATE update(const float delta = 0) = 0;
-
-		/**
-		*	@name clone
-		*	@brief Clone node.
-		virtual Node* clone() { return nullptr; };
-		*/
 
 		/**
 		*	@name reset
@@ -136,7 +131,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		CompositeNode(Node* child);
+		CompositeNode(std::unique_ptr<Node> child);
 
 		/**
 		*	@name CompositeNode
@@ -144,7 +139,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		CompositeNode(const std::vector<Node*>& children);
+		CompositeNode(std::vector<std::unique_ptr<Node>>& children);
 
 		//Disable copy constructor
 		CompositeNode(CompositeNode const&) = delete;
@@ -162,7 +157,7 @@ namespace BehaviorTree
 		const bool isRunningChildIndexValid();
 
 		//Holds the children. 
-		std::vector<Node*> children;
+		std::vector<std::unique_ptr<Node>> children;
 
 		/**
 		*	@name updateRunningChild
@@ -182,7 +177,7 @@ namespace BehaviorTree
 		*
 		*	@return A children vector reference.
 		*/
-		const std::vector<Node*>& getChildren();
+		const std::vector<std::unique_ptr<Node>>& getChildren();
 
 		/**
 		*	@name addChild
@@ -191,7 +186,7 @@ namespace BehaviorTree
 		*	@param child A child node.
 		*	@return True if successfully adds child. False if fails.
 		*/
-		const bool addChild(Node* child);
+		const bool addChild(std::unique_ptr<Node> child);
 
 		/**
 		*	@name addChildren
@@ -200,7 +195,7 @@ namespace BehaviorTree
 		*	@param child Children nodes.
 		*	@return True if successfully adds children. False if fails.
 		*/
-		const bool addChildren(const std::vector<Node*>& children);
+		const bool addChildren(std::vector<std::unique_ptr<Node>>& children);
 
 		/**
 		*	@name clearChildren
@@ -236,7 +231,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		Selector(Node* child);
+		Selector(std::unique_ptr<Node> child);
 
 		/**
 		*	@name Selector
@@ -244,7 +239,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		Selector(const std::vector<Node*>& children);
+		Selector(std::vector<std::unique_ptr<Node>>& children);
 
 		//Disable copy constructor
 		Selector(Selector const&) = delete;
@@ -276,7 +271,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		RandomSelector(Node* child);
+		RandomSelector(std::unique_ptr<Node> child);
 
 		/**
 		*	@name RandomSelector
@@ -284,7 +279,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		RandomSelector(const std::vector<Node*>& children);
+		RandomSelector(std::vector<std::unique_ptr<Node>>& children);
 
 		//Default destructor
 		~RandomSelector();
@@ -306,7 +301,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		Sequence(Node* child);
+		Sequence(std::unique_ptr<Node> child);
 
 		/**
 		*	@name Sequence
@@ -314,7 +309,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		Sequence(const std::vector<Node*>& children);
+		Sequence(std::vector<std::unique_ptr<Node>>& children);
 
 		//Default destructor
 		~Sequence();
@@ -340,7 +335,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		RandomSequence(Node* child);
+		RandomSequence(std::unique_ptr<Node> child);
 
 		/**
 		*	@name RandomSequence
@@ -348,7 +343,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to initialize with.
 		*/
-		RandomSequence(const std::vector<Node*>& children);
+		RandomSequence(std::vector<std::unique_ptr<Node>>& children);
 
 		//Default destructor
 		~RandomSequence();
@@ -371,10 +366,10 @@ namespace BehaviorTree
 		*	@param child A node to initialize with.
 		*	@param overwrite Deletes existing child and overwrite with new one. True by default.
 		*/
-		DecoratorNode(Node* child);
+		DecoratorNode(std::unique_ptr<Node> child);
 
 		//A node that is wrapped
-		Node* child;
+		std::unique_ptr<Node> child;
 	public:
 		//Disable copy constructor
 		DecoratorNode(DecoratorNode const&) = delete;
@@ -391,7 +386,7 @@ namespace BehaviorTree
 		*
 		*	@param child A node to wrap. Ignored if there is an existing child.
 		*/
-		void addChild(Node* child, const bool overwrite = true);
+		void addChild(std::unique_ptr<Node> child, const bool overwrite = true);
 	};
 
 	/**
@@ -413,7 +408,7 @@ namespace BehaviorTree
 		*	@brief Constructor with child
 		*	@param child A child node to decorate.
 		*/
-		Inverter(Node* child);
+		Inverter(std::unique_ptr<Node> child);
 
 		//Disable copy constructor
 		Inverter(Inverter const&) = delete;
@@ -449,7 +444,7 @@ namespace BehaviorTree
 		*
 		*	@param child A child node to decorate.
 		*/
-		Succeeder(Node* child);
+		Succeeder(std::unique_ptr<Node> child);
 
 		//Disable copy constructor
 		Succeeder(Succeeder const&) = delete;
@@ -483,7 +478,7 @@ namespace BehaviorTree
 		*	@brief Failer constructor
 		*	@param child A child node to decorate.
 		*/
-		Failer(Node* child);
+		Failer(std::unique_ptr<Node> child);
 
 		//Disable copy constructor
 		Failer(Failer const&) = delete;
@@ -518,7 +513,7 @@ namespace BehaviorTree
 		*	@param child A child node to decorate.
 		*	@param repeat Amount of number to repeat this node.
 		*/
-		Repeat(Node* child, const int repeat);
+		Repeat(std::unique_ptr<Node> child, const int repeat);
 
 		//Disable copy constructor
 		Repeat(Repeat const&) = delete;
@@ -534,6 +529,9 @@ namespace BehaviorTree
 
 		// set repeat. Beaware that large amount of repeat might slow down your application.
 		void setRepeat(const int repeat);
+
+		// Get how many times this node repeats
+		const int getRepeat();
 	};
 
 	/**
@@ -557,7 +555,7 @@ namespace BehaviorTree
 		*	@param child A child node to decorate.
 		*	@param repeat Amount of number to repeat this node.
 		*/
-		Repeater(Node* child, const int repeat);
+		Repeater(std::unique_ptr<Node> child, const int repeat);
 
 		//Disable copy constructor
 		Repeater(Repeater const&) = delete;
@@ -594,7 +592,7 @@ namespace BehaviorTree
 		*	@param child A child node to decorate.
 		*	@param repeat Amount of number to repeat this node.
 		*/
-		RepeatUntil(Node* child, const int repeat, const NODE_STATE conditionStatus);
+		RepeatUntil(std::unique_ptr<Node> child, const int repeat, const NODE_STATE conditionStatus);
 
 		//Disable copy constructor
 		RepeatUntil(RepeatUntil const&) = delete;
@@ -629,7 +627,7 @@ namespace BehaviorTree
 		*	@param child A child node to decorate.
 		*	@param repeat Amount of number to repeat this node.
 		*/
-		RepeatUntilFail(Node* child, const int repeat);
+		RepeatUntilFail(std::unique_ptr<Node> child, const int repeat);
 
 		//Disable copy constructor
 		RepeatUntilFail(RepeatUntilFail const&) = delete;
@@ -661,7 +659,7 @@ namespace BehaviorTree
 		*	@param child A child node to decorate.
 		*	@param repeat Amount of number to repeat this node.
 		*/
-		RepeatUntilSuccess(Node* child, const int repeat);
+		RepeatUntilSuccess(std::unique_ptr<Node> child, const int repeat);
 
 		//Disable copy constructor
 		RepeatUntilSuccess(RepeatUntilSuccess const&) = delete;
@@ -696,7 +694,7 @@ namespace BehaviorTree
 		*	@param child A child node to decorate.
 		*	@param limit A number of limit of excution of this node
 		*/
-		Limiter(Node* child, const int limit);
+		Limiter(std::unique_ptr<Node> child, const int limit);
 
 		//Disable copy constructor
 		Limiter(Limiter const&) = delete;
@@ -738,7 +736,7 @@ namespace BehaviorTree
 		*	@param child A child node to decorate.
 		*	@param duration Time to delay.
 		*/
-		DelayTime(Node* child, const float duration, const bool delayOnce);
+		DelayTime(std::unique_ptr<Node> child, const float duration, const bool delayOnce);
 
 		//Disable copy constructor
 		DelayTime(DelayTime const&) = delete;
@@ -778,7 +776,7 @@ namespace BehaviorTree
 		*	@param child A child node to decorate.
 		*	@param duration Time to delay.
 		*/
-		TimeLimit(Node* child, const float duration);
+		TimeLimit(std::unique_ptr<Node> child, const float duration);
 
 		//Disable copy constructor
 		TimeLimit(TimeLimit const&) = delete;
