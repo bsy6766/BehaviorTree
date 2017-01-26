@@ -764,3 +764,40 @@ const BehaviorTree::NODE_STATE BehaviorTree::DelayTime::update(const float delta
 		return result;
 	}
 }
+
+
+
+
+BehaviorTree::TimeLimit::TimeLimit(const float duration) : BehaviorTree::DecoratorNode(nullptr), duration(duration), elapsedTime(0), failed(false) {}
+
+BehaviorTree::TimeLimit::TimeLimit(BehaviorTree::Node* child, const float duration) : BehaviorTree::DecoratorNode(child), duration(duration), elapsedTime(0), failed(false) {}
+
+const BehaviorTree::NODE_STATE BehaviorTree::TimeLimit::update(const float delta)
+{
+	if (this->child == nullptr)
+	{
+		return BehaviorTree::NODE_STATE::ERROR;
+	}
+
+	// Haven't failed yet
+	if (this->elapsedTime >= this->duration)
+	{
+		// Check if finished
+		BehaviorTree::NODE_STATE state = this->child->update(delta);
+		if (state == BehaviorTree::NODE_STATE::RUNNING)
+		{
+			// Failed
+			this->elapsedTime = 0;
+			return BehaviorTree::NODE_STATE::FAILURE;
+		}
+		else
+		{
+			return state;
+		}
+	}
+	else
+	{
+		// Add time
+		this->elapsedTime += delta;
+	}
+}

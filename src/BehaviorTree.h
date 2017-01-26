@@ -726,15 +726,15 @@ namespace BehaviorTree
 		BehaviorTree::NODE_STATE result;
 	public:
 		/**
-		*	@name Delay
-		*	@brief Delay constructor
+		*	@name DelayTime
+		*	@brief DelayTime constructor
 		*	@note nullptr child will return ERROR
 		*/
 		DelayTime(const float duration, const bool delayOnce);
 
 		/**
-		*	@name Delay
-		*	@brief Delay constructor with child and duration
+		*	@name DelayTime
+		*	@brief DelayTime constructor with child and duration
 		*	@param child A child node to decorate.
 		*	@param duration Time to delay.
 		*/
@@ -748,6 +748,46 @@ namespace BehaviorTree
 
 		// Default destructor
 		~DelayTime() = default;
+
+		// @copydoc Node::update(const float delta = 0)
+		virtual const NODE_STATE update(const float delta = 0) override;
+	};
+
+	/**
+	*	@class TimeLimit
+	*	@brief Limits the time until the child node finishes the execution. If it fails to finish before time expires, it will return FAILURE.
+	*/
+	class TimeLimit : public DecoratorNode
+	{
+	private:
+		float duration;
+		float elapsedTime;
+		bool failed;
+	public:
+		/**
+		*	@name TimeLimit
+		*	@brief TimeLimit constructor
+		*	@note nullptr child will return ERROR
+		*	@param duration Time to delay.
+		*/
+		TimeLimit(const float duration);
+
+		/**
+		*	@name TimeLimit
+		*	@brief TimeLimit constructor with child and duration
+		*	@param child A child node to decorate.
+		*	@param duration Time to delay.
+		*/
+		TimeLimit(Node* child, const float duration);
+
+		//Disable copy constructor
+		TimeLimit(TimeLimit const&) = delete;
+
+		//Disable assign operator
+		void operator=(TimeLimit const&) = delete;
+
+		// Default destructor
+		~TimeLimit() = default;
 
 		// @copydoc Node::update(const float delta = 0)
 		virtual const NODE_STATE update(const float delta = 0) override;
